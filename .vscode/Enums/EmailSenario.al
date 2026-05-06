@@ -4,4 +4,8 @@ enumextension 50100 "Email Scenario Ext" extends "Email Scenario"
     {
         Caption = 'Low Stock Notification';
     }
+    value(50101; "Order Confirmation")
+    {
+        Caption = 'Order Confirmation';
+    }
 }
