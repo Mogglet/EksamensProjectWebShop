@@ -23,8 +23,8 @@ page 50101 SalesItemChartPage
                     ItemRec: Record Item;
                     Token: JsonToken;
                 begin
-                    // Extract X value (Item No.)
-                    if Point.Get('XValue', Token) then begin
+                    // Try both (depends on BC version)
+                    if Point.Get('XValue', Token) or Point.Get('Label', Token) then begin
                         ItemNo := Token.AsValue().AsText();
 
                         if ItemRec.Get(ItemNo) then
@@ -43,26 +43,33 @@ page 50101 SalesItemChartPage
     var
         ItemNo: Code[20];
         Qty: Decimal;
+        Index: Integer;
     begin
         ChartBuffer.Reset();
         ChartBuffer.DeleteAll();
 
-        // Setup chart
+        // Define measure
         ChartBuffer.AddMeasure('Quantity', 0, ChartBuffer."Data Type"::Decimal, 0);
 
         SalesQuery.Open();
 
+        Index := 0;
+
         while SalesQuery.Read() do begin
+            Index += 1;
+
             ItemNo := SalesQuery.ItemNo;
             Qty := SalesQuery.TotalQuantity;
 
+            // ✅ THIS is the correct way in your version
             ChartBuffer.AddColumn(ItemNo);
-            ChartBuffer.SetValue('Quantity', ItemNo, Qty);
+
+            // Use index internally
+            ChartBuffer.SetValue('Quantity', Index, Qty);
         end;
 
         SalesQuery.Close();
 
-        // Apply buffer to chart
         ChartBuffer.Update(CurrPage.Chart);
     end;
 }
