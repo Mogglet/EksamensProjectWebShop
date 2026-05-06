@@ -1,7 +1,6 @@
 page 50101 SalesItemChartPage
 {
     PageType = CardPart;
-    SourceTable = "Integer";
     ApplicationArea = All;
     Caption = 'Items Sold Chart';
 
@@ -15,19 +14,22 @@ page 50101 SalesItemChartPage
 
                 trigger AddInReady()
                 begin
-                    LoadChart();
+                    BuildChart();
                 end;
 
                 trigger DataPointClicked(Point: JsonObject)
                 var
                     ItemNo: Code[20];
-                    Item: Record Item;
+                    ItemRec: Record Item;
+                    Token: JsonToken;
                 begin
-                    // Get item no from clicked point
-                    Point.GetValue('XValue', ItemNo);
+                    // Extract X value (Item No.)
+                    if Point.Get('XValue', Token) then begin
+                        ItemNo := Token.AsValue().AsText();
 
-                    if Item.Get(ItemNo) then
-                        Page.Run(Page::"Item Card", Item);
+                        if ItemRec.Get(ItemNo) then
+                            Page.Run(Page::"Item Card", ItemRec);
+                    end;
                 end;
             }
         }
@@ -35,27 +37,32 @@ page 50101 SalesItemChartPage
 
     var
         SalesQuery: Query SalesItemChartQuery;
+        ChartBuffer: Record "Business Chart Buffer" temporary;
 
-    local procedure LoadChart()
+    local procedure BuildChart()
     var
-        Labels: List of [Text];
-        Values: List of [Decimal];
         ItemNo: Code[20];
         Qty: Decimal;
     begin
+        ChartBuffer.Reset();
+        ChartBuffer.DeleteAll();
+
+        // Setup chart
+        ChartBuffer.AddMeasure('Quantity', 0, ChartBuffer."Data Type"::Decimal, 0);
+
         SalesQuery.Open();
 
         while SalesQuery.Read() do begin
             ItemNo := SalesQuery.ItemNo;
-            Qty := SalesQuery.Quantity;
+            Qty := SalesQuery.TotalQuantity;
 
-            Labels.Add(ItemNo);
-            Values.Add(Qty);
+            ChartBuffer.AddColumn(ItemNo);
+            ChartBuffer.SetValue('Quantity', ItemNo, Qty);
         end;
 
         SalesQuery.Close();
 
-        CurrPage.Chart.SetXAxis(Labels);
-        CurrPage.Chart.AddSeries('Items Sold', Values);
+        // Apply buffer to chart
+        ChartBuffer.Update(CurrPage.Chart);
     end;
 }

@@ -1,23 +1,18 @@
 query 50100 SalesItemChartQuery
 {
-    QueryType = Normal;
-
     elements
     {
         dataitem(SalesLine; "Sales Line")
         {
+            DataItemTableFilter = Type = const(Item);
+
             column(ItemNo; "No.")
             {
             }
 
-            column(Quantity; Quantity)
+            column(TotalQuantity; Quantity)
             {
                 Method = Sum;
-            }
-
-            filter(Type; Type)
-            {
-                Const = Item;
             }
         }
     }
