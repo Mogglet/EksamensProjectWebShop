@@ -48,7 +48,7 @@ codeunit 50103 "Get Woo Orders"
         end
         else begin
             // If the response is not successful, display an error message with the status code
-            Message('Failed to retrieve orders. Status code: %1', Response.HttpStatusCode());
+            Error('Failed to retrieve orders. Status code: %1', Response.HttpStatusCode());
         end;
     end;
 
@@ -79,11 +79,14 @@ codeunit 50103 "Get Woo Orders"
         TempToken: JsonToken;
         Lines: JsonArray;
         LineToken: JsonToken;
+        OrderConfirmationMgt: Codeunit "Order Confirmation Mgt";
+        SalesHeader: Record "Sales Header";
 
         OrderId: Integer;
         CustomerEmail: Text;
         CustomerName: Text;
         CustomerNo: Code[20];
+        SalesHeaderNo: Code[20];
     begin
         OrderObject := OrderToken.AsObject();
 
@@ -101,22 +104,36 @@ codeunit 50103 "Get Woo Orders"
         ExtractCustomerInfo(TempToken, CustomerEmail, CustomerName);
         CustomerNo := GetOrCreateCustomer(CustomerEmail, CustomerName);
 
+        // Create the sales order header
+        SalesHeaderNo := CreateSalesOrderHeader(CustomerNo, OrderId);
+
         // Get line items
         OrderObject.Get('line_items', TempToken);
         Lines := TempToken.AsArray();
         foreach LineToken in Lines do begin
-            HandleOrderLine(LineToken);
+            HandleOrderLine(SalesHeaderNo, LineToken);
         end;
+
+        // Log the processed order
+        LogProcessedOrder(OrderId, SalesHeaderNo);
+
+        // Send order confirmation email
+        SalesHeader.Get(SalesHeaderNo);
+        OrderConfirmationMgt.SendOrderConfirmation(SalesHeader);
     end;
 
     /// <summary>
     /// Handles an order line by extracting the SKU and quantity from the line item JSON token.
+    /// It then checks if the item exists in the inventory and creates a sales line for the order.
     /// </summary>
+    /// <param name="SalesHeaderNo"></param>
     /// <param name="LineToken"></param>
-    local procedure HandleOrderLine(LineToken: JsonToken)
+    local procedure HandleOrderLine(SalesHeaderNo: Code[20]; LineToken: JsonToken)
     var
         LineObject: JsonObject;
         TempToken: JsonToken;
+        Item: Record Item;
+        SalesLine: Record "Sales Line";
 
         SKU: Text;
         Quantity: Integer;
@@ -131,8 +148,35 @@ codeunit 50103 "Get Woo Orders"
         LineObject.Get('quantity', TempToken);
         Quantity := TempToken.AsValue().AsInteger();
 
-        Message('Order Line - SKU: %1, Quantity: %2', SKU, Quantity);
+        Item.SetRange("No.", SKU);
+        if Item.FindFirst() then begin
+            // Create sales line
+            SalesLine.Init();
+            SalesLine.Validate("Document Type", SalesLine."Document Type"::Order);
+            SalesLine.Validate("Document No.", SalesHeaderNo);
+            SalesLine.Validate("Line No.", GetNextLineNo(SalesHeaderNo));
+            SalesLine.Validate("Type", SalesLine."Type"::Item);
+            SalesLine.Validate("No.", SKU);
+            SalesLine.Validate("Quantity", Quantity);
+            SalesLine.Insert(true);
+        end
+        else begin
+            // If the item does not exist, log a message or handle accordingly
+            Error('Item with SKU %1 not found in inventory.', SKU);
+        end;
     end;
+
+    local procedure GetNextLineNo(SalesHeaderNo: Code[20]): Integer
+    var
+        SalesLine: Record "Sales Line";
+    begin
+        SalesLine.SetRange("Document Type", SalesLine."Document Type"::Order);
+        SalesLine.SetRange("Document No.", SalesHeaderNo);
+        if SalesLine.FindLast() then
+            exit(SalesLine."Line No." + 10000);
+        exit(10000);
+    end;
+
 
     /// <summary>
     /// Finds customer information from json billing
@@ -178,10 +222,11 @@ codeunit 50103 "Get Woo Orders"
         else begin
             // If not found, create a new customer
             Customer.Init();
-            Customer.Insert(true);
             Customer.Validate("E-Mail", Email);
             Customer.Validate("Name", Name);
-            Customer.Modify(True);
+            Customer.Validate("Customer Posting Group", 'EU');
+            Customer.Validate("Gen. Bus. Posting Group", 'EU');
+            Customer.Insert(true);
             exit(Customer."No.");
         end;
     end;
@@ -200,15 +245,37 @@ codeunit 50103 "Get Woo Orders"
     end;
 
     /// <summary>
-    /// Creates sales order
+    /// Creates a sales order header in Business Central for the given customer number and order ID.
+    /// </summary>
+    /// <param name="CustomerNo"></param>
+    /// <param name="OrderId"></param>
+    /// <returns></returns>
+    local procedure CreateSalesOrderHeader(CustomerNo: Code[20]; OrderId: Integer): Code[20]
+    var
+        SalesHeader: Record "Sales Header";
+    begin
+        SalesHeader.Init();
+        SalesHeader.Validate("Document Type", SalesHeader."Document Type"::Order);
+        SalesHeader.Insert(true);
+        SalesHeader.Validate("Sell-to Customer No.", CustomerNo);
+        SalesHeader.Validate("External Document No.", Format(OrderId));
+        SalesHeader.Modify(true);
+        exit(SalesHeader."No.");
+    end;
+
+    /// <summary>
+    /// Logs the processed order in the Woo Order Link table.
     /// </summary>
     /// <param name="OrderId"></param>
-    /// <param name="CustomerNo"></param>
-    /// <param name="OrderDate"></param>
-    local procedure CreateSalesOrder(OrderId: Integer; CustomerNo: Code[20]; OrderDate: Date)
+    /// <param name="SalesHeaderNo"></param>
+    local procedure LogProcessedOrder(OrderId: Integer; SalesHeaderNo: Code[20])
     var
-        SalesOrder: Record "Sales Header";
         WOL: Record "Woo Order Link";
     begin
+        WOL.Init();
+        WOL.Validate("Order ID", OrderId);
+        WOL.Validate("Sales Order No.", SalesHeaderNo);
+        WOL.Insert();
     end;
+
 }
