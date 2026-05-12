@@ -1,4 +1,4 @@
-codeunit 50101 "Stock Checker"
+codeunit 50104 "Stock Checker"
 {
     procedure CheckStock()
     var
