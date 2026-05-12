@@ -52,6 +52,12 @@ codeunit 50103 "Get Woo Orders"
         end;
     end;
 
+    /// <summary>
+    /// Processes the retrieved orders from WooCommerce. 
+    /// It reads the orders JSON, iterates through each order, 
+    /// and handles them accordingly.
+    /// </summary>
+    /// <param name="OrdersJson"></param>
     local procedure ProcessOrders(OrdersJson: Text)
     var
         Orders: JsonArray;
@@ -63,6 +69,10 @@ codeunit 50103 "Get Woo Orders"
         end;
     end;
 
+    /// <summary>
+    /// Handles an order by extracting the order ID, customer information, and line items from the order JSON token.
+    /// </summary>
+    /// <param name="OrderToken"></param>
     local procedure HandleOrder(OrderToken: JsonToken)
     var
         OrderObject: JsonObject;
@@ -189,6 +199,12 @@ codeunit 50103 "Get Woo Orders"
         exit(WOL.FindFirst());
     end;
 
+    /// <summary>
+    /// Creates sales order
+    /// </summary>
+    /// <param name="OrderId"></param>
+    /// <param name="CustomerNo"></param>
+    /// <param name="OrderDate"></param>
     local procedure CreateSalesOrder(OrderId: Integer; CustomerNo: Code[20]; OrderDate: Date)
     var
         SalesOrder: Record "Sales Header";
