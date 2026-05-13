@@ -30,7 +30,7 @@ codeunit 50103 "Get Woo Orders"
         // Set the URL for the WooCommerce REST API endpoint
         URL := 'http://localhost:81/wordpress/wp-json/wc/v2/orders';
 
-        Auth := 'ck_aad846fcc935821ba3433e3587a3e504ab4dbee1:cs_69be980c307b38df47b018bbd198d3751a6c41ee';
+        Auth := 'ck_7f48a3cb38c0f504cca75648fb0ec5a74c5ac2f5:cs_9cb6377ea3ccb94e643fc8f69721de08d973d2c1';
         Base64Auth := Base64Convert.ToBase64(Auth);
 
         // Add the Authorization header with Basic Auth
@@ -178,6 +178,11 @@ codeunit 50103 "Get Woo Orders"
         end;
     end;
 
+    /// <summary>
+    /// Finds the next available line number for a sales order.
+    /// </summary>
+    /// <param name="SalesHeaderNo"></param>
+    /// <returns></returns>
     local procedure GetNextLineNo(SalesHeaderNo: Code[20]): Integer
     var
         SalesLine: Record "Sales Line";
