@@ -50,37 +50,41 @@ page 50101 SalesItemChartPage
         Qty: Decimal;
         Index: Integer;
     begin
-        // Clear previous chart data
         ChartBuffer.Reset();
         ChartBuffer.DeleteAll();
 
-        // Define a measure (Y-axis)
-        // 'Quantity' is the name shown in legend
-        ChartBuffer.AddMeasure('Quantity', 0, ChartBuffer."Data Type"::Decimal, 0);
+        ChartBuffer.Initialize();
 
-        // Open query to read aggregated sales data
+        ChartBuffer.SetXAxis(
+            'Items',
+            ChartBuffer."Data Type"::String);
+
+        ChartBuffer.AddMeasure(
+            'Quantity',
+            1,
+            ChartBuffer."Data Type"::Decimal,
+            ChartBuffer."Chart Type"::Column);
+
         SalesQuery.Open();
 
         Index := 0;
 
-        // Loop through each item result from query
         while SalesQuery.Read() do begin
-            Index += 1;
-
             ItemNo := SalesQuery.ItemNo;
             Qty := SalesQuery.TotalQuantity;
 
-            // Add a column (X-axis label = Item No.)
             ChartBuffer.AddColumn(ItemNo);
 
-            // Assign value to the column (Y-axis value)
-            // Uses index because chart requires numeric positioning
-            ChartBuffer.SetValue('Quantity', Index, Qty);
+            // IMPORTANT:
+            // MeasureIndex = 0
+            // ColumnIndex = Index
+            ChartBuffer.SetValueByIndex(0, Index, Qty);
+
+            Index += 1;
         end;
 
         SalesQuery.Close();
 
-        // Send prepared data to chart UI
         ChartBuffer.Update(CurrPage.Chart);
     end;
 }
