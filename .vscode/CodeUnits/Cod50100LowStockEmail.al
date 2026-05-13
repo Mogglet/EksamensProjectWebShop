@@ -1,5 +1,9 @@
 codeunit 50100 "Low Stock Email Mgt"
 {
+    /// <summary>
+    /// Sends a low stock notification email to the configured recipient.
+    /// </summary>
+    /// <param name="Body">The body of the email.</param>
     procedure SendLowStockEmail(Body: Text)
     var
         Email: Codeunit "Email";

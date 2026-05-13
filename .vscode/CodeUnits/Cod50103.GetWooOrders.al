@@ -30,7 +30,7 @@ codeunit 50103 "Get Woo Orders"
         // Set the URL for the WooCommerce REST API endpoint
         URL := 'http://localhost:81/wordpress/wp-json/wc/v2/orders';
 
-        Auth := 'ck_7f48a3cb38c0f504cca75648fb0ec5a74c5ac2f5:cs_9cb6377ea3ccb94e643fc8f69721de08d973d2c1';
+        Auth := 'ck_aad846fcc935821ba3433e3587a3e504ab4dbee1:cs_69be980c307b38df47b018bbd198d3751a6c41ee';
         Base64Auth := Base64Convert.ToBase64(Auth);
 
         // Add the Authorization header with Basic Auth
@@ -91,8 +91,10 @@ codeunit 50103 "Get Woo Orders"
         OrderObject := OrderToken.AsObject();
 
         // Extract the order ID
-        OrderObject.Get('id', TempToken);
-        OrderId := TempToken.AsValue().AsInteger();
+        if OrderObject.Get('id', TempToken) then
+            OrderId := TempToken.AsValue().AsInteger()
+        else
+            Error('Order ID missing.');
 
         // Check if the order has already been processed
         if OrderAlreadyProcessed(OrderId) then begin
@@ -100,16 +102,22 @@ codeunit 50103 "Get Woo Orders"
         end;
 
         // Extract the customer email from the billing information
-        OrderObject.Get('billing', TempToken);
-        ExtractCustomerInfo(TempToken, CustomerEmail, CustomerName);
+        if OrderObject.Get('billing', TempToken) then
+            ExtractCustomerInfo(TempToken, CustomerEmail, CustomerName)
+        else
+            Error('Billing information missing.');
+
         CustomerNo := GetOrCreateCustomer(CustomerEmail, CustomerName);
 
         // Create the sales order header
         SalesHeaderNo := CreateSalesOrderHeader(CustomerNo, OrderId);
 
         // Get line items
-        OrderObject.Get('line_items', TempToken);
-        Lines := TempToken.AsArray();
+        if OrderObject.Get('line_items', TempToken) then
+            Lines := TempToken.AsArray()
+        else
+            Error('Line items missing.');
+
         foreach LineToken in Lines do begin
             HandleOrderLine(SalesHeaderNo, LineToken);
         end;
@@ -118,7 +126,7 @@ codeunit 50103 "Get Woo Orders"
         LogProcessedOrder(OrderId, SalesHeaderNo);
 
         // Send order confirmation email
-        SalesHeader.Get(SalesHeaderNo);
+        SalesHeader.Get(SalesHeader."Document Type"::Order, SalesHeaderNo);
         OrderConfirmationMgt.SendOrderConfirmation(SalesHeader);
     end;
 
@@ -141,12 +149,16 @@ codeunit 50103 "Get Woo Orders"
         LineObject := LineToken.AsObject();
 
         // Extract the SKU
-        LineObject.Get('sku', TempToken);
-        SKU := TempToken.AsValue().AsText();
+        if LineObject.Get('sku', TempToken) then
+            SKU := TempToken.AsValue().AsText()
+        else
+            Error('SKU missing in WooCommerce order line.');
 
         // Extract the quantity
-        LineObject.Get('quantity', TempToken);
-        Quantity := TempToken.AsValue().AsInteger();
+        if LineObject.Get('quantity', TempToken) then
+            Quantity := TempToken.AsValue().AsInteger()
+        else
+            Error('Quantity missing in WooCommerce order line.');
 
         Item.SetRange("No.", SKU);
         if Item.FindFirst() then begin

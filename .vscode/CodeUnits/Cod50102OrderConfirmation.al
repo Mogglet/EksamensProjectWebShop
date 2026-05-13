@@ -1,5 +1,9 @@
 codeunit 50102 "Order Confirmation Mgt"
-{
+{   
+    /// <summary>
+    /// Sends Orderconfirmation to customer
+    /// </summary>
+    /// <param name="SalesHeader"></param>
     procedure SendOrderConfirmation(SalesHeader: Record "Sales Header")
     var
         Email: Codeunit "Email";
