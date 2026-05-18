@@ -4,6 +4,11 @@ page 50101 SalesItemChartPage
     ApplicationArea = All;
     Caption = 'Items Sold Chart';
 
+    /// <summary>
+    /// This page part displays a chart of the top-selling items based on sales order data.
+    /// It uses a query to aggregate sales quantities by item and visualizes the data in a
+    /// column chart. Users can click on a bar in the chart to navigate to the corresponding item card.
+    /// </summary>
     layout
     {
         area(content)
@@ -26,14 +31,11 @@ page 50101 SalesItemChartPage
                     ItemRec: Record Item;
                     Token: JsonToken;
                 begin
-                    // Extract clicked value (Item No.)
-                    // Different BC versions use XValue or Label
-                    if Point.Get('XValue', Token) or Point.Get('Label', Token) then begin
+                    if Point.Get('XValueString', Token) then begin
                         ItemNo := Token.AsValue().AsText();
 
-                        // Open the Item Card for the selected product
                         if ItemRec.Get(ItemNo) then
-                            Page.Run(Page::"Item Card", ItemRec);
+                            Page.RunModal(Page::"Item Card", ItemRec);
                     end;
                 end;
             }

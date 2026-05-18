@@ -1,5 +1,8 @@
 codeunit 50104 "Stock Checker"
 {
+    /// <summary>
+    /// Checks item stock levels against the configured threshold and sends notification emails if necessary.
+    /// </summary>
     procedure CheckStock()
     var
         Item: Record Item;
