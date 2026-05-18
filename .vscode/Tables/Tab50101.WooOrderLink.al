@@ -5,6 +5,7 @@ table 50101 "Woo Order Link"
     /// It stores the WooCommerce Order ID, the associated Sales Order No. in BC,
     /// and the date/time when the order was processed. This allows for tracking and synchronization
     /// between the two systems.
+    /// </summary>
     Caption = 'Woo Order Link';
     DataClassification = ToBeClassified;
 
